@@ -1,3 +1,5 @@
+# ⚠️THIS IS A WORK IN PROGRESS⚠️
+
 # Documentation for JavaScript class "Builder":
 
 ## The "Builder" class is a utility class that provides methods to create and manipulate DOM elements.
