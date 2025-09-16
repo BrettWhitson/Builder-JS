@@ -1,57 +1,68 @@
-# ⚠️THIS IS A WORK IN PROGRESS⚠️
+# ⚠️ BuilderJS (IN PROGRESS) ⚠️
 
-# Documentation for JavaScript class "Builder":
+BuilderJS is a modern utility for building and manipulating DOM elements in JavaScript, with a focus on flexible APIs, chaining, and Emmet-like syntax. The API is currently evolving and this documentation reflects the latest available features.
 
-## The "Builder" class is a utility class that provides methods to create and manipulate DOM elements.
+## Key Features
 
-1. "build" method:
+- **Flexible element creation**: Use tag names, options objects, Emmet strings, functions, or Builder instances.
+- **Chaining**: Easily chain child elements and build complex structures.
+- **Static and instance methods**: Create elements with `Builder.create`, add children with `addChild`, and process arguments in multiple formats.
+- **Emmet-like syntax**: Create elements using simple Emmet strings (limited support).
+- **Options object**: Set attributes, classes, innerText, innerHTML, and children.
+- **Children as arrays, functions, or Builder instances**: Compose UIs with maximum flexibility.
 
-    - Syntax: `Builder.build(tag, options)`
-    - Description: Creates a new DOM element with the specified tag and options. The tag parameter is a string representing the HTML tag name of the element to be created. The options parameter is an object containing key-value pairs that represent the element's attributes, innerHTML, and children.
-    - Parameters:
-        - `tag`: The tag name of the element to be created (string)
-        - `options`: An object containing the attributes, innerHTML, and children of the element (object)
-    - Return value: The newly created DOM element (object)
+## Usage Examples
 
-2. "multibuild" method:
+```js
+import Builder from "./builder.js";
 
-    - Syntax: `Builder.multibuild(tag, num, options)`
-    - Description: Creates a document fragment containing multiple copies of the same DOM element created using the "build" method.
-    - Parameters:
-        - `tag`: The tag name of the element to be created (string)
-        - `num`: The number of times to create the element (number)
-        - `options`: An object containing the attributes, innerHTML, and children of the element (object)
-    - Return value: A document fragment containing multiple copies of the same DOM element (object)
+// Create a container div
+const builder = new Builder("div", { id: "main-container", class: "container" });
 
-3. "mod" object:
+// Add children in various ways
+builder.addChild("h1", { innerText: "Welcome to BuilderJS" });
+builder.addChild("p", { innerText: "Paragraph added with options." });
+builder.addChild(new Builder("p", { innerText: "Added with Builder instance." }));
+builder.addChild(() => {
+  const p = document.createElement("p");
+  p.innerText = "Added with function.";
+  return p;
+});
+builder.addChild(() => new Builder("p", { innerText: "Function returning Builder." }));
 
-    - Description: An object containing methods to modify elements' ID, class, and attributes.
-    - Properties:
-        - `id`: An object containing methods to add, remove, and toggle an element's ID.
-        - `class`: An object containing methods to add, remove, and toggle an element's class.
-        - `attribute`: An object containing methods to add and remove an element's attributes.
+// Chaining with static create
+builder.addChild(Builder.create("ul", { class: "list" }).addChild("li", { innerText: "Chained item 1" }).addChild("li", { innerText: "Chained item 2" }));
 
-4. "pack" method:
+// Static create with children array
+builder.addChild(
+  Builder.create({
+    tag: "div",
+    options: { class: "static", innerText: "Static div" },
+    children: [{ tag: "p", options: { innerText: "Child paragraph" } }, Builder.create("p", { innerText: "Builder child" })],
+  })
+);
 
-    - Syntax: `Builder.pack(elementArr, ...elements)`
-    - Description: Creates a document fragment containing the specified elements.
-    - Parameters:
-        - `elementArr`: An array or a single DOM element to be packed (array or object)
-        - `elements`: Additional DOM elements to be packed (object)
-    - Return value: A document fragment containing the specified elements (object)
+// Emmet syntax
+builder.addChild("div.container#secondary{Emmet div}").addChild(Builder.create("h2", { innerText: "Emmet h2" }));
 
-5. "chain" method:
+// Object literal
+builder.addChild({ tag: "p", options: { innerText: "Object literal paragraph." } });
+```
 
-    - Syntax: `Builder.chain(...elements)`
-    - Description: Chains the specified elements together as children.
-    - Parameters:
-        - `elements`: DOM elements to be chained (object)
-    - Return value: A document fragment containing the chained elements (object)
+## API Reference (Current)
 
-6. "emmet" method: **(not yet implemented)**
-    - Syntax: `Builder.emmet(emmetString, options)`
-    - Description: Parses an Emmet string and returns the corresponding DOM element.
-    - Parameters:
-        - `emmetString`: A string representing the Emmet notation of the element to be created (string)
-        - `options`: An object containing the attributes, innerHTML, and children of the element (object)
-    - Return value: The corresponding DOM element (object)
+### `Builder` class
+
+- **Constructor**: `new Builder(tag, options?)`
+- **Static create**: `Builder.create(...args)`
+- **addChild(...args)**: Add a child element (Builder, HTMLElement, function, Emmet string, object, etc.)
+- **addChildren(array)**: Add multiple children
+- **applyOptions(options)**: Set attributes, class, innerText, innerHTML
+
+### Emmet Support
+
+Basic Emmet parsing is supported for strings like `div#id.class>child*count`. More advanced Emmet features are planned.
+
+### Status
+
+This project is actively being rebuilt. The API and features may change. See `showcase.html` for live usage examples.
