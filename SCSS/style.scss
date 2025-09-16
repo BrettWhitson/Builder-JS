@@ -1,0 +1,94 @@
+$primary-color: #3498db;
+$secondary-color: #2ecc71;
+$accent-color: #f39c12;
+$background: #f4f8fb;
+$card-bg: #fff;
+$card-shadow: 0 4px 16px rgba(52, 152, 219, 0.08);
+$font-stack: "Segoe UI", Arial, sans-serif;
+
+body {
+  font-family: $font-stack;
+  background: $background;
+  color: darken($primary-color, 25%);
+  margin: 0;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: $card-bg;
+  box-shadow: $card-shadow;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+h1,
+h2 {
+  color: $primary-color;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+h2 {
+  color: $accent-color;
+}
+
+p {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  margin: 0.5rem 0;
+}
+
+.list {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+.list li {
+  margin-bottom: 0.4rem;
+  font-size: 1rem;
+  color: darken($secondary-color, 10%);
+}
+
+.static {
+  background: lighten($secondary-color, 40%);
+  border-left: 4px solid $secondary-color;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.container#secondary-showcase {
+  background: lighten($primary-color, 45%);
+  border-left: 4px solid $primary-color;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.button {
+  background: $secondary-color;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.08);
+  transition: background 0.2s, box-shadow 0.2s;
+  &:hover {
+    background: darken($secondary-color, 10%);
+    box-shadow: 0 4px 16px rgba(46, 204, 113, 0.16);
+  }
+}
+
+@media (max-width: 800px) {
+  .container {
+    max-width: 98vw;
+    padding: 1rem;
+  }
+}
