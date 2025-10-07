@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./css/development-showcase.css">
+  <title>BuilderJS 0.0.3 Modern Showcase (In Development)</title>
+</head>
+
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
+  <div id="showcase-container"></div>
+
+  <script src="./builder.js"></script>
+  <script>
+    // Create main showcase container
+    const showcase = new Builder('div', { id: 'main-showcase', class: 'showcase-container' });
+
+    // === HEADER ===
+    showcase.addChild('header', { class: 'showcase-header' }, header => {
+      header.addChild('h1', { innerText: 'BuilderJS 0.0.3 - Modern Scoped Building (In Development)', class: 'main-title' });
+      header.addChild('p', { innerText: 'Clean, readable DOM construction without navigation hell - In Development', class: 'subtitle' });
+    });
+
+    // === SCOPED BUILDING DEMO ===
+    showcase.addChild('section', { class: 'demo-section highlight-section', id: 'scoped-building' }, section => {
+      section.addChild('h2', { innerText: '🆕 Scoped Building Patterns' });
+      section.addChild('p', {
+        innerText: 'Build complex structures with clean, readable code that matches your DOM structure.',
+        class: 'section-description'
+      });
+
+      section.addChild('div', { class: 'demo-grid' }, grid => {
+        // Scoped addChild demo
+        grid.addChild('div', { class: 'demo-card' }, card => {
+          card.addChild('h3', { innerText: 'Scoped addChild()' });
+          card.addChild('div', { class: 'code-block' }, codeBlock => {
+            codeBlock.addChild('pre', {
+              innerText: `parent.addChild('div', {class: 'card'}, card => {
+  card.addChild('h3', {innerText: 'Title'});
+  card.addChild('p', {innerText: 'Content'});
+});` });
+          });
+
+          card.addChild('div', { class: 'demo-output' }, output => {
+            output.addChild('div', { class: 'example-card' }, exampleCard => {
+              exampleCard.addChild('h4', { innerText: 'Example Card' });
+              exampleCard.addChild('p', { innerText: 'Built with scoped callback!' });
+              exampleCard.addChild('div', { class: 'actions' }, actions => {
+                actions.addChild('button', { innerText: 'Action 1', class: 'btn' });
+                actions.addChild('button', { innerText: 'Action 2', class: 'btn' });
+              });
+            });
+          });
+        });
+
+        // Nested scoping demo
+        grid.addChild('div', { class: 'demo-card' }, card => {
+          card.addChild('h3', { innerText: 'Deep Nesting' });
+          card.addChild('div', { class: 'code-block' }, codeBlock => {
+            codeBlock.addChild('pre', {
+              innerText: `builder.addChild('section', section => {
+  section.addChild('header', header => {
+    header.addChild('nav', nav => {
+      nav.addChild('ul', ul => {
+        ul.addChild('li', {innerText: 'Home'});
+        ul.addChild('li', {innerText: 'About'});
+      });
+    });
+  });
+});` });
+          });
+
+          card.addChild('div', { class: 'demo-output' }, output => {
+            output.addChild('section', { class: 'example-section' }, exampleSection => {
+              exampleSection.addChild('header', { class: 'example-header' }, header => {
+                header.addChild('h4', { innerText: 'Site Header' });
+                header.addChild('nav', { class: 'example-nav' }, nav => {
+                  nav.addChild('ul', { class: 'nav-list' }, ul => {
+                    ul.addChild('li', { innerText: 'Home' });
+                    ul.addChild('li', { innerText: 'About' });
+                    ul.addChild('li', { innerText: 'Contact' });
+                  });
+                });
+              });
+              exampleSection.addChild('div', { innerText: 'Clean nested structure!', class: 'content' });
+            });
+          });
+        });
+      });
+    });
+
+    // === BEFORE/AFTER COMPARISON ===
+    showcase.addChild('section', { class: 'demo-section', id: 'comparison' }, section => {
+      section.addChild('h2', { innerText: '❌ vs ✅ Old vs New' });
+
+      section.addChild('div', { class: 'comparison-grid' }, grid => {
+        // OLD WAY
+        grid.addChild('div', { class: 'demo-card legacy-demo' }, card => {
+          card.addChild('h3', { innerText: '❌ OLD: Navigation Hell (REMOVED)' });
+          card.addChild('div', { class: 'code-block' }, codeBlock => {
+            codeBlock.addChild('pre', {
+              innerText: `// OLD PATTERN - ELIMINATED!
+builder.addChild('header')
+  .addChild('h1').end()
+  .addChild('nav').end()
+  .end() // Navigate back
+.addChild('main')
+  .addChild('section').end()
+  .up() // More navigation
+.addChild('footer');` });
+          });
+          card.addChild('p', {
+            innerText: '🚫 These methods have been completely removed from BuilderJS 3.0!',
+            class: 'warning'
+          });
+        });
+
+        // NEW WAY
+        grid.addChild('div', { class: 'demo-card modern-demo' }, card => {
+          card.addChild('h3', { innerText: '✅ NEW: Clean Scoped Building' });
+          card.addChild('div', { class: 'code-block' }, codeBlock => {
+            codeBlock.addChild('pre', {
+              innerText: `// MODERN PATTERN - CLEAN!
+builder.addChild('header', header => {
+  header.addChild('h1');
+  header.addChild('nav');
+}).addChild('main', main => {
+  main.addChild('section');
+}).addChild('footer');` });
+          });
+
+          card.addChild('div', { class: 'demo-output' }, output => {
+            const example = new Builder('div', { class: 'modern-example' });
+            example.addChild('div', { class: 'ex-header', innerText: 'Header' }, header => {
+              header.addChild('div', { class: 'ex-title', innerText: 'Title' });
+              header.addChild('div', { class: 'ex-nav', innerText: 'Navigation' });
+            }).addChild('div', { class: 'ex-main', innerText: 'Main Content' }, main => {
+              main.addChild('div', { class: 'ex-section', innerText: 'Section' });
+            }).addChild('div', { class: 'ex-footer', innerText: 'Footer' });
+
+            output.currentContext.appendChild(example.root);
+          });
+        });
+      });
+    });
+
+    // === PRACTICAL EXAMPLES ===
+    showcase.addChild('section', { class: 'demo-section', id: 'examples' }, section => {
+      section.addChild('h2', { innerText: '🛠️ Practical Examples' });
+
+      // Form example
+      section.addChild('div', { class: 'demo-card full-width' }, card => {
+        card.addChild('h3', { innerText: 'Complex Form Building' });
+        card.addChild('div', { class: 'demo-output' }, output => {
+          output.addChild('form', { class: 'example-form' }, form => {
+            form.addChild('div', { class: 'form-group' }, group => {
+              group.addChild('label', { innerText: 'Name', for: 'name' });
+              group.addChild('input', { type: 'text', id: 'name', placeholder: 'Enter your name' });
+            });
+
+            form.addChild('div', { class: 'form-group' }, group => {
+              group.addChild('label', { innerText: 'Email', for: 'email' });
+              group.addChild('input', { type: 'email', id: 'email', placeholder: 'Enter your email' });
+            });
+
+            form.addChild('div', { class: 'form-actions' }, actions => {
+              actions.addChild('button', { type: 'submit', innerText: 'Submit', class: 'btn primary' });
+              actions.addChild('button', { type: 'reset', innerText: 'Reset', class: 'btn secondary' });
+            });
+          });
+        });
+      });
+
+      // Interactive demo
+      section.addChild('div', { class: 'demo-card full-width' }, card => {
+        card.addChild('h3', { innerText: 'Interactive Example' });
+        card.addChild('div', { class: 'demo-output' }, output => {
+          output.addChild('div', { class: 'interactive-demo' }, demo => {
+            const addButton = demo.addChild('button', { innerText: 'Add Item', class: 'add-btn' });
+            const container = demo.addChild('div', { class: 'items-container' });
+
+            // Add interactivity - use direct reference to button
+            addButton.on('click', function () {
+              const timestamp = new Date().toLocaleTimeString();
+
+              const item = new Builder('div', { class: 'dynamic-item' });
+              item.addChild('span', { innerText: `Item added at ${timestamp}` });
+              const removeBtn = item.addChild('button', { innerText: '×', class: 'remove-btn' });
+
+              // Add event to remove button
+              removeBtn.on('click', function () {
+                this.root.parentElement.remove();
+              });
+
+              container.currentContext.appendChild(item.root);
+            });
+          });
+        });
+      });
+    });
+
+    // === FEATURES SUMMARY ===
+    showcase.addChild('footer', { class: 'showcase-footer' }, footer => {
+      footer.addChild('h3', { innerText: 'BuilderJS 0.0.3 Features' });
+
+      footer.addChild('div', { class: 'features-grid' }, grid => {
+        const features = [
+          { title: '🆕 Scoped Building', desc: 'Callback-based nesting without navigation' },
+          { title: '🧹 Clean API', desc: 'Removed .end(), .up(), .toRoot(), .save(), .restore()' },
+          { title: '📖 Readable Code', desc: 'Code structure matches DOM structure' },
+          { title: '🚀 Better Performance', desc: 'Simplified internals, faster execution' },
+          { title: '🛡️ Error Resilient', desc: 'Robust error handling in callbacks' },
+          { title: '🔧 Easy Maintenance', desc: 'Self-documenting hierarchical patterns' }
+        ];
+
+        features.forEach(feature => {
+          grid.addChild('div', { class: 'feature-card' }, card => {
+            card.addChild('h4', { innerText: feature.title });
+            card.addChild('p', { innerText: feature.desc });
+          });
+        });
+      });
+
+      footer.addChild('p', {
+        innerText: 'BuilderJS 0.0.3 - Modern DOM building for the modern web',
+        class: 'footer-description'
+      });
+    });
+
+    // Render the showcase
+    document.getElementById('showcase-container').appendChild(showcase.root);
+
+    // Theme toggle functionality
+    function toggleTheme() {
+      const body = document.body;
+      const toggle = document.querySelector('.theme-toggle');
+
+      if (body.getAttribute('data-theme') === 'dark') {
+        body.removeAttribute('data-theme');
+        toggle.textContent = '🌙 Dark';
+        localStorage.setItem('theme', 'light');
+      } else {
+        body.setAttribute('data-theme', 'dark');
+        toggle.textContent = '☀️ Light';
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+
+    // Load saved theme
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      document.body.setAttribute('data-theme', 'dark');
+      document.querySelector('.theme-toggle').textContent = '☀️ Light';
+    }
+
+    console.log('✅ BuilderJS 0.0.3 Modern Showcase loaded successfully!');
+    console.log('🎯 Modern scoped building patterns eliminate navigation hell');
+  </script>
+</body>
+
+</html>
