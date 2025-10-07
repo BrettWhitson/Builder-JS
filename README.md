@@ -14,7 +14,7 @@
 [![Version](https://img.shields.io/badge/version-0.0.3--in--development-orange.svg)](https://github.com/BrettWhitson/Builder-JS)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-In%20Development-yellow.svg)](https://github.com/BrettWhitson/Builder-JS)
-[![Modern](https://img.shields.io/badge/Modern-Clean%20Architecture-## 📋 TODOs (In Development)rightgreen.svg)](https://github.com/BrettWhitson/Builder-JS)
+[![Modern](https://img.shields.io/badge/Modern-Clean%20Architecture-brightgreen.svg)](https://github.com/BrettWhitson/Builder-JS)
 
 **BuilderJS 0.0.3** is a **clean, modern DOM manipulation library** in active development that focuses exclusively on **scoped building patterns**. We've eliminated navigation hell by removing all legacy methods and focusing on what matters: **readable, maintainable DOM construction**.
 
