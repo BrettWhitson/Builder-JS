@@ -493,7 +493,8 @@ builder
 
 ## 📖 Documentation
 
-- **[Live Demo](development-showcase.html)** - See BuilderJS 0.0.3 in action
+- **[Live Demo](https://home.brettwhitson.dev/Builder-JS/development-showcase.html)** - See BuilderJS 0.0.3 in action (GitHub Pages)
+- **[Local Demo](development-showcase.html)** - Development showcase (local file)
 - **[API Documentation](docs/builder.html)** - Complete method reference
 - **[Migration Guide](#-migration-guide-v2x--v003)** - Upgrade from v2.x
 
