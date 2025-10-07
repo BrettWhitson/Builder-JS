@@ -1,98 +1,554 @@
+/**
+ * BuilderJS - Modern DOM manipulation library with scoped building patterns
+ * @version 3.0.0
+ * @description Clean, readable DOM construction without navigation hell
+ */
+
+// ===== GLOBAL CONFIGURATION =====
+
+/**
+ * Global configuration and state management
+ * @private
+ */
+const BuilderConfig = {
+  validationMode: "warn", // 'strict', 'warn', 'silent'
+  errorCallback: null,
+  components: new Map(),
+  templates: new Map(),
+};
+
+/**
+ * WeakMap for storing event listeners to prevent memory leaks
+ * @private
+ */
+const eventListeners = new WeakMap();
+
+// ===== UTILITY FUNCTIONS =====
+
+/**
+ * Parses basic Emmet syntax into DOM elements
+ * @param {string} emmet - Emmet string to parse (supports: tag#id.class>child*count)
+ * @returns {HTMLElement} The created DOM element
+ * @private
+ */
+function parseEmmet(emmet) {
+  const tagMatch = emmet.match(/^(\w+)/);
+  const tag = tagMatch ? tagMatch[1] : "div";
+  const idMatch = emmet.match(/#(\w+)/);
+  const classMatch = emmet.match(/\.(\w+)/);
+  const childMatch = emmet.match(/>(\w+)(\*(\d+))?/);
+
+  const element = document.createElement(tag);
+
+  if (idMatch) element.id = idMatch[1];
+  if (classMatch) element.className = classMatch[1];
+
+  if (childMatch) {
+    const childTag = childMatch[1];
+    const count = childMatch[3] ? parseInt(childMatch[3], 10) : 1;
+    for (let i = 0; i < count; i++) {
+      element.appendChild(document.createElement(childTag));
+    }
+  }
+
+  return element;
+}
+
+/**
+ * Converts camelCase CSS properties to kebab-case
+ * @param {string} property - CSS property in camelCase
+ * @returns {string} CSS property in kebab-case
+ * @private
+ */
+function camelToKebab(property) {
+  return property.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
+}
+
+/**
+ * Validates HTML tag names
+ * @param {string} tag - Tag name to validate
+ * @returns {boolean} True if valid
+ * @private
+ */
+function isValidTag(tag) {
+  try {
+    document.createElement(tag);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Logs errors based on validation mode
+ * @param {string} message - Error message
+ * @param {*} context - Error context
+ * @private
+ */
+function logError(message, context = null) {
+  const error = new Error(message);
+  if (BuilderConfig.errorCallback) {
+    BuilderConfig.errorCallback(error, context);
+  }
+
+  switch (BuilderConfig.validationMode) {
+    case "strict":
+      throw error;
+    case "warn":
+      console.warn(`BuilderJS: ${message}`, context);
+      break;
+    case "silent":
+      break;
+  }
+}
+
+/**
+ * Applies options to a DOM element with consistent handling
+ * @param {HTMLElement} element - The element to apply options to
+ * @param {Object} options - Options object containing attributes and properties
+ * @private
+ */
+function applyElementOptions(element, options) {
+  if (!options || !element) return;
+
+  Object.entries(options).forEach(([key, value]) => {
+    if (key === "class") {
+      element.className = value;
+    } else if (key === "innerText") {
+      element.innerText = value;
+    } else if (key === "innerHTML") {
+      element.innerHTML = value;
+    } else {
+      element.setAttribute(key, value);
+    }
+  });
+}
+
+// ===== MAIN BUILDER CLASS =====
+
+/**
+ * Main Builder class for DOM manipulation with scoped building patterns
+ * @class Builder
+ * @description Provides modern scoped building interface without navigation hell
+ */
 class Builder {
-    static build(tag, options) {
-        let element = document.createElement(tag);
-        let ops = {
-            inner: (v) => {
-                element.innerHTML = v;
-            },
-            children: (v) => {
-                v.forEach((child) => {
-                    element.appendChild(child);
-                });
-            },
-        };
-        for (let key in options) {
-            if (ops[key]) {
-                ops[key](options[key]);
-            } else {
-                element.setAttribute(key, options[key]);
-            }
-        }
-        return element;
+  // === STATIC METHODS ===
+
+  /**
+   * Processes and normalizes various argument patterns into a standard format
+   * @param {...*} args - Variable arguments to process
+   * @returns {Object} Processed arguments object with tag, options, children, or root
+   * @static
+   */
+  static processArgs(...args) {
+    // Input validation
+    if (args.length === 0) {
+      console.warn("BuilderJS: No arguments provided to processArgs");
+      return { tag: "div", options: {} };
     }
-    static multibuild(tag, num, options) {
-        let frag = document.createDocumentFragment();
-        let element = Builder.build(tag, options);
-        for (let i = 0; i < num; i++) {
-            frag.appendChild(element.cloneNode(true));
-        }
-        return frag;
+
+    // Handle Builder instances
+    if (args[0] instanceof Builder) {
+      return { root: args[0].root };
     }
-    static mod = {
-        id: {
-            add: (node, idString) => {
-                node.setAttribute("id", idString);
-            },
-            remove: (node, idString) => {
-                node.removeAttribute("id");
-            },
-        },
-        class: {
-            add: (node, classString) => {
-                let newClasses = classString.split(" ");
-                node.classList.add(...newClasses);
-            },
-            remove: (node, classString) => {
-                let newClasses = classString.split(" ");
-                node.classList.remove(...newClasses);
-            },
-            toggle: (node, classString) => {
-                let toggles = classString.split(" ");
-                node.classList.toggle(...toggles);
-            },
-        },
-        attribute: {
-            add: (node, options) => {
-                for (let key in options) {
-                    node.setAttribute(key, options[key]);
-                }
-            },
-            remove: (node, attributeString) => {
-                let attributes = attributeString.split(" ");
-                node.removeAttribute(...attributes);
-            },
-        },
+
+    // Handle HTMLElements
+    if (args[0] instanceof HTMLElement) {
+      return { root: args[0] };
+    }
+
+    // Handle functions
+    if (typeof args[0] === "function") {
+      const result = args[0]();
+      if (result instanceof Builder) {
+        return { root: result.root };
+      } else if (result instanceof HTMLElement) {
+        return { root: result };
+      }
+    }
+
+    // Handle Emmet strings
+    if (typeof args[0] === "string" && /[>#.*{]/.test(args[0])) {
+      return { root: parseEmmet(args[0]), options: args[1] || {} };
+    }
+
+    // Handle object literals
+    if (typeof args[0] === "object" && args[0] !== null) {
+      const { tag, options = {}, children = [] } = args[0];
+      return { tag, options, children };
+    }
+
+    // Handle standard tag, options, innerText pattern
+    const options = args[1] || {};
+    if (args.length >= 3 && typeof args[2] === "string") {
+      options.innerText = args[2];
+    }
+
+    return { tag: args[0] || "div", options };
+  }
+
+  /**
+   * Creates a new Builder instance with optional configuration
+   * @param {...*} args - Arguments to process for builder creation
+   * @returns {Builder} New Builder instance
+   * @static
+   */
+  static create(...args) {
+    return new Builder(...args);
+  }
+
+  /**
+   * Creates a document fragment builder for efficient DOM operations
+   * @returns {Builder} Builder instance with DocumentFragment as root
+   * @static
+   */
+  static fragment() {
+    const builder = new Builder();
+    builder.root = document.createDocumentFragment();
+    builder.currentContext = builder.root;
+    return builder;
+  }
+
+  // === CONSTRUCTOR ===
+
+  /**
+   * Creates a new Builder instance
+   * @param {...*} args - Element creation arguments
+   * @example
+   * const builder = new Builder('div', {class: 'container', id: 'main'});
+   */
+  constructor(...args) {
+    const processed = Builder.processArgs(...args);
+
+    if (processed.root) {
+      this.root = processed.root;
+      this.currentContext = this.root; // Set currentContext before applyOptions
+      this.applyOptions(processed.options);
+    } else {
+      this.root = document.createElement(processed.tag || "div");
+      this.currentContext = this.root; // Set currentContext before applyOptions
+      this.applyOptions(processed.options);
+      if (processed.children) {
+        this.addChildren(processed.children);
+      }
+    }
+  }
+
+  // === CORE BUILDING METHODS ===
+
+  /**
+   * Creates a child element and sets it as the current context, with optional scoped building
+   * @param {...*} args - Arguments for element creation, with optional callback as last parameter
+   * @returns {Builder} This instance for chaining
+   */
+  build(...args) {
+    // Check if last argument is a callback for scoped building
+    const hasCallback = args.length >= 2 && typeof args[args.length - 1] === "function";
+    const callback = hasCallback ? args[args.length - 1] : null;
+
+    // Process args without the callback
+    const argsForProcessing = hasCallback ? args.slice(0, -1) : args;
+    const processed = Builder.processArgs(...argsForProcessing);
+    let newElement;
+
+    if (processed.root) {
+      newElement = processed.root;
+    } else {
+      newElement = document.createElement(processed.tag || "div");
+      applyElementOptions(newElement, processed.options);
+    }
+
+    // Add as child to current context
+    this.currentContext.appendChild(newElement);
+
+    // If callback provided, execute with new builder for the element
+    if (callback) {
+      const childBuilder = new Builder();
+      childBuilder.root = newElement;
+      childBuilder.currentContext = newElement;
+      try {
+        callback(childBuilder);
+      } catch (error) {
+        if (BuilderConfig.validationMode === "strict") {
+          throw error;
+        } else if (BuilderConfig.validationMode === "warn") {
+          console.warn("BuilderJS build callback error:", error);
+        }
+      }
+      return this;
+    }
+
+    // Set new element as current context (original behavior)
+    this.currentContext = newElement;
+    return this;
+  }
+
+  /**
+   * Adds a child element to the current context with optional scoped building
+   * @param {...*} args - Arguments for child creation, with optional callback as last parameter
+   * @returns {Builder} Child builder instance or this instance for chaining
+   */
+  addChild(...args) {
+    // Check if last argument is a callback for scoped building
+    const hasCallback = args.length >= 2 && typeof args[args.length - 1] === "function";
+    const callback = hasCallback ? args[args.length - 1] : null;
+
+    // Process args without the callback
+    const argsForProcessing = hasCallback ? args.slice(0, -1) : args;
+    const processed = Builder.processArgs(...argsForProcessing);
+    let node, childBuilder;
+
+    if (processed.root) {
+      if (typeof argsForProcessing[0] === "string" && /[>#.*{]/.test(argsForProcessing[0])) {
+        childBuilder = new Builder("div");
+        childBuilder.root = processed.root;
+        childBuilder.applyOptions(processed.options);
+        node = childBuilder.root;
+      } else {
+        node = processed.root;
+        if (callback) {
+          childBuilder = new Builder();
+          childBuilder.root = node;
+          childBuilder.currentContext = node;
+        }
+      }
+    } else if (processed.tag) {
+      childBuilder = new Builder(processed.tag, processed.options);
+      node = childBuilder.root;
+    } else if (argsForProcessing[0] instanceof Builder) {
+      node = argsForProcessing[0].root;
+      childBuilder = argsForProcessing[0];
+    } else if (argsForProcessing[0] instanceof HTMLElement) {
+      node = argsForProcessing[0];
+      if (callback) {
+        childBuilder = new Builder();
+        childBuilder.root = node;
+        childBuilder.currentContext = node;
+      }
+    }
+
+    if (node) {
+      this.currentContext.appendChild(node);
+    }
+
+    // If callback provided, execute with child builder for scoped building
+    if (callback && childBuilder) {
+      try {
+        callback(childBuilder);
+      } catch (error) {
+        if (BuilderConfig.validationMode === "strict") {
+          throw error;
+        } else if (BuilderConfig.validationMode === "warn") {
+          console.warn("BuilderJS addChild callback error:", error);
+        }
+      }
+      return this;
+    }
+
+    return childBuilder || this;
+  }
+
+  /**
+   * Execute a callback with this builder instance for scoped building
+   * @param {Function} callback - Callback function to execute with this builder
+   * @returns {Builder} This instance for chaining
+   */
+  scope(callback) {
+    if (typeof callback !== "function") {
+      console.warn("BuilderJS: scope() requires a callback function");
+      return this;
+    }
+
+    try {
+      const result = callback(this);
+      return result instanceof Builder ? result : this;
+    } catch (error) {
+      if (BuilderConfig.validationMode === "strict") {
+        throw error;
+      } else if (BuilderConfig.validationMode === "warn") {
+        console.warn("BuilderJS scope error:", error);
+      }
+      return this;
+    }
+  }
+
+  // === CSS CLASS MANAGEMENT ===
+
+  addClass(...classes) {
+    classes.forEach((cls) => this.currentContext.classList.add(cls));
+    return this;
+  }
+
+  removeClass(...classes) {
+    classes.forEach((cls) => this.currentContext.classList.remove(cls));
+    return this;
+  }
+
+  toggleClass(...classes) {
+    classes.forEach((cls) => this.currentContext.classList.toggle(cls));
+    return this;
+  }
+
+  hasClass(className) {
+    return this.currentContext.classList.contains(className);
+  }
+
+  addClassIf(condition, ...classes) {
+    if (condition) {
+      this.addClass(...classes);
+    }
+    return this;
+  }
+
+  removeClassIf(condition, ...classes) {
+    if (condition) {
+      this.removeClass(...classes);
+    }
+    return this;
+  }
+
+  // === STYLING METHODS ===
+
+  style(styles) {
+    if (typeof styles === "object") {
+      Object.entries(styles).forEach(([key, value]) => {
+        this.currentContext.style[key] = value;
+      });
+    }
+    return this;
+  }
+
+  css(property, value) {
+    if (value !== undefined) {
+      this.currentContext.style[property] = value;
+    }
+    return this;
+  }
+
+  show() {
+    this.currentContext.style.display = "";
+    return this;
+  }
+
+  hide() {
+    this.currentContext.style.display = "none";
+    return this;
+  }
+
+  toggle() {
+    const isHidden = this.currentContext.style.display === "none";
+    this.currentContext.style.display = isHidden ? "" : "none";
+    return this;
+  }
+
+  // === EVENT HANDLING ===
+
+  on(events, handler, options = {}) {
+    const eventArray = Array.isArray(events) ? events : [events];
+    const listeners = eventListeners.get(this.currentContext) || [];
+
+    eventArray.forEach((event) => {
+      this.currentContext.addEventListener(event, handler, options);
+      listeners.push({ event, handler, options });
+    });
+
+    eventListeners.set(this.currentContext, listeners);
+    return this;
+  }
+
+  off(events, handler) {
+    const eventArray = Array.isArray(events) ? events : [events];
+    eventArray.forEach((event) => {
+      this.currentContext.removeEventListener(event, handler);
+    });
+    return this;
+  }
+
+  delegate(event, selector, handler) {
+    const delegateHandler = (e) => {
+      if (e.target.matches(selector)) {
+        handler.call(this, e);
+      }
     };
-    static pack(elementArr, ...elements) {
-        console.log("pack called:", elementArr, elements);
-        let pack = document.createDocumentFragment();
-        console.log("typeof elementArr:", typeof elementArr);
-        if (typeof elementArr === "object" && elementArr.length) {
-            for (let element of elementArr) {
-                pack.appendChild(element);
-            }
-        } else {
-            pack.appendChild(elementArr);
-            for (let element of elements) {
-                pack.appendChild(element);
-            }
-        }
-        console.log("pack:", pack);
-        return pack;
+    this.on(event, delegateHandler);
+    return this;
+  }
+
+  // === ELEMENT QUERYING ===
+
+  find(selector) {
+    const element = this.currentContext.querySelector(selector);
+    if (element) {
+      const builder = new Builder();
+      builder.root = element;
+      builder.currentContext = element;
+      return builder;
     }
-    static chain(...elements) {
-        let chain = document.createDocumentFragment();
-        let lowest;
-        for (let element of elements) {
-            if (!chain.lastElementChild) {
-                chain.appendChild(element);
-                lowest = element;
-            } else {
-                lowest.appendChild(element);
-                lowest = element;
-            }
-        }
-        return chain;
+    return null;
+  }
+
+  findAll(selector) {
+    const elements = Array.from(this.currentContext.querySelectorAll(selector));
+    return elements.map((element) => {
+      const builder = new Builder();
+      builder.root = element;
+      builder.currentContext = element;
+      return builder;
+    });
+  }
+
+  // === UTILITY METHODS ===
+
+  applyOptions(options) {
+    applyElementOptions(this.currentContext, options);
+    return this;
+  }
+
+  appendTo(parent) {
+    if (parent instanceof HTMLElement) {
+      parent.appendChild(this.root);
+    } else if (parent instanceof Builder) {
+      parent.currentContext.appendChild(this.root);
     }
-    static emmet(emmetString, options) {}
+    return this;
+  }
+
+  // === GLOBAL CONFIGURATION ===
+
+  static setValidationMode(mode) {
+    if (["strict", "warn", "silent"].includes(mode)) {
+      BuilderConfig.validationMode = mode;
+    }
+  }
+
+  static setErrorCallback(callback) {
+    BuilderConfig.errorCallback = callback;
+  }
+}
+
+// ===== EXPORTS =====
+
+// Universal module definition for maximum compatibility
+if (typeof module !== "undefined" && module.exports) {
+  // Node.js/CommonJS
+  module.exports = Builder;
+  module.exports.parseEmmet = parseEmmet;
+  module.exports.camelToKebab = camelToKebab;
+  module.exports.BuilderConfig = BuilderConfig;
+} else if (typeof window !== "undefined") {
+  // Browser global
+  window.Builder = Builder;
+  window.BuilderConfig = BuilderConfig;
+}
+
+// ES6 modules for modern bundlers
+try {
+  if (typeof exports !== "undefined") {
+    exports.parseEmmet = parseEmmet;
+    exports.camelToKebab = camelToKebab;
+    exports.BuilderConfig = BuilderConfig;
+    exports.default = Builder;
+  }
+} catch (e) {
+  // Ignore in browser environments
 }
