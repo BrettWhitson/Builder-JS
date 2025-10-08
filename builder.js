@@ -1,7 +1,7 @@
 /**
  * BuilderJS - Modern DOM manipulation library with scoped building patterns
- * @version 3.0.0
- * @description Clean, readable DOM construction without navigation hell
+ * @version 0.0.4
+ * @description Simplified API with comprehensive security validation
  */
 
 // ===== GLOBAL CONFIGURATION =====
@@ -12,9 +12,6 @@
  */
 const BuilderConfig = {
   validationMode: "warn", // 'strict', 'warn', 'silent'
-  errorCallback: null,
-  components: new Map(),
-  templates: new Map(),
 };
 
 /**
@@ -26,80 +23,21 @@ const eventListeners = new WeakMap();
 // ===== UTILITY FUNCTIONS =====
 
 /**
- * Parses basic Emmet syntax into DOM elements
- * @param {string} emmet - Emmet string to parse (supports: tag#id.class>child*count)
- * @returns {HTMLElement} The created DOM element
- * @private
- */
-function parseEmmet(emmet) {
-  const tagMatch = emmet.match(/^(\w+)/);
-  const tag = tagMatch ? tagMatch[1] : "div";
-  const idMatch = emmet.match(/#(\w+)/);
-  const classMatch = emmet.match(/\.(\w+)/);
-  const childMatch = emmet.match(/>(\w+)(\*(\d+))?/);
-
-  const element = document.createElement(tag);
-
-  if (idMatch) element.id = idMatch[1];
-  if (classMatch) element.className = classMatch[1];
-
-  if (childMatch) {
-    const childTag = childMatch[1];
-    const count = childMatch[3] ? parseInt(childMatch[3], 10) : 1;
-    for (let i = 0; i < count; i++) {
-      element.appendChild(document.createElement(childTag));
-    }
-  }
-
-  return element;
-}
-
-/**
- * Converts camelCase CSS properties to kebab-case
- * @param {string} property - CSS property in camelCase
- * @returns {string} CSS property in kebab-case
- * @private
- */
-function camelToKebab(property) {
-  return property.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
-}
-
-/**
  * Validates HTML tag names
  * @param {string} tag - Tag name to validate
  * @returns {boolean} True if valid
  * @private
  */
 function isValidTag(tag) {
-  try {
-    document.createElement(tag);
-    return true;
-  } catch {
-    return false;
-  }
-}
+  if (!tag || typeof tag !== "string") return false;
 
-/**
- * Logs errors based on validation mode
- * @param {string} message - Error message
- * @param {*} context - Error context
- * @private
- */
-function logError(message, context = null) {
-  const error = new Error(message);
-  if (BuilderConfig.errorCallback) {
-    BuilderConfig.errorCallback(error, context);
-  }
+  // Check for basic HTML tag format (letters, numbers, hyphens)
+  if (!/^[a-zA-Z][a-zA-Z0-9-]*$/.test(tag)) return false;
 
-  switch (BuilderConfig.validationMode) {
-    case "strict":
-      throw error;
-    case "warn":
-      console.warn(`BuilderJS: ${message}`, context);
-      break;
-    case "silent":
-      break;
-  }
+  // List of valid HTML5 tags
+  const validTags = new Set(["a", "abbr", "address", "area", "article", "aside", "audio", "b", "base", "bdi", "bdo", "blockquote", "body", "br", "button", "canvas", "caption", "cite", "code", "col", "colgroup", "data", "datalist", "dd", "del", "details", "dfn", "dialog", "div", "dl", "dt", "em", "embed", "fieldset", "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4", "h5", "h6", "head", "header", "hgroup", "hr", "html", "i", "iframe", "img", "input", "ins", "kbd", "label", "legend", "li", "link", "main", "map", "mark", "menu", "meta", "meter", "nav", "noscript", "object", "ol", "optgroup", "option", "output", "p", "picture", "pre", "progress", "q", "rp", "rt", "ruby", "s", "samp", "script", "search", "section", "select", "slot", "small", "source", "span", "strong", "style", "sub", "summary", "sup", "table", "tbody", "td", "template", "textarea", "tfoot", "th", "thead", "time", "title", "tr", "track", "u", "ul", "var", "video", "wbr"]);
+
+  return validTags.has(tag.toLowerCase());
 }
 
 /**
@@ -135,59 +73,6 @@ class Builder {
   // === STATIC METHODS ===
 
   /**
-   * Processes and normalizes various argument patterns into a standard format
-   * @param {...*} args - Variable arguments to process
-   * @returns {Object} Processed arguments object with tag, options, children, or root
-   * @static
-   */
-  static processArgs(...args) {
-    // Input validation
-    if (args.length === 0) {
-      console.warn("BuilderJS: No arguments provided to processArgs");
-      return { tag: "div", options: {} };
-    }
-
-    // Handle Builder instances
-    if (args[0] instanceof Builder) {
-      return { root: args[0].root };
-    }
-
-    // Handle HTMLElements
-    if (args[0] instanceof HTMLElement) {
-      return { root: args[0] };
-    }
-
-    // Handle functions
-    if (typeof args[0] === "function") {
-      const result = args[0]();
-      if (result instanceof Builder) {
-        return { root: result.root };
-      } else if (result instanceof HTMLElement) {
-        return { root: result };
-      }
-    }
-
-    // Handle Emmet strings
-    if (typeof args[0] === "string" && /[>#.*{]/.test(args[0])) {
-      return { root: parseEmmet(args[0]), options: args[1] || {} };
-    }
-
-    // Handle object literals
-    if (typeof args[0] === "object" && args[0] !== null) {
-      const { tag, options = {}, children = [] } = args[0];
-      return { tag, options, children };
-    }
-
-    // Handle standard tag, options, innerText pattern
-    const options = args[1] || {};
-    if (args.length >= 3 && typeof args[2] === "string") {
-      options.innerText = args[2];
-    }
-
-    return { tag: args[0] || "div", options };
-  }
-
-  /**
    * Creates a new Builder instance with optional configuration
    * @param {...*} args - Arguments to process for builder creation
    * @returns {Builder} New Builder instance
@@ -218,115 +103,88 @@ class Builder {
    * const builder = new Builder('div', {class: 'container', id: 'main'});
    */
   constructor(...args) {
-    const processed = Builder.processArgs(...args);
-
-    if (processed.root) {
-      this.root = processed.root;
-      this.currentContext = this.root; // Set currentContext before applyOptions
-      this.applyOptions(processed.options);
+    // Handle different input types
+    if (args.length === 0) {
+      // Default div
+      this.root = document.createElement("div");
+      this.currentContext = this.root;
+    } else if (args[0] instanceof Builder) {
+      // Copy from another builder
+      this.root = args[0].root;
+      this.currentContext = this.root;
+    } else if (args[0] instanceof HTMLElement) {
+      // Use existing element
+      this.root = args[0];
+      this.currentContext = this.root;
+      this.applyOptions(args[1] || {});
     } else {
-      this.root = document.createElement(processed.tag || "div");
-      this.currentContext = this.root; // Set currentContext before applyOptions
-      this.applyOptions(processed.options);
-      if (processed.children) {
-        this.addChildren(processed.children);
+      // Standard tag + options
+      const tag = args[0] || "div";
+
+      // Validate tag name
+      if (!isValidTag(tag)) {
+        if (BuilderConfig.validationMode === "strict") {
+          throw new Error(`BuilderJS: Invalid tag name '${tag}'`);
+        } else if (BuilderConfig.validationMode === "warn") {
+          console.warn(`BuilderJS: Invalid tag name '${tag}', using 'div' instead`);
+        }
+        this.root = document.createElement("div");
+      } else {
+        this.root = document.createElement(tag);
       }
+
+      this.currentContext = this.root;
+      this.applyOptions(args[1] || {});
     }
   }
 
   // === CORE BUILDING METHODS ===
 
   /**
-   * Creates a child element and sets it as the current context, with optional scoped building
-   * @param {...*} args - Arguments for element creation, with optional callback as last parameter
-   * @returns {Builder} This instance for chaining
-   */
-  build(...args) {
-    // Check if last argument is a callback for scoped building
-    const hasCallback = args.length >= 2 && typeof args[args.length - 1] === "function";
-    const callback = hasCallback ? args[args.length - 1] : null;
-
-    // Process args without the callback
-    const argsForProcessing = hasCallback ? args.slice(0, -1) : args;
-    const processed = Builder.processArgs(...argsForProcessing);
-    let newElement;
-
-    if (processed.root) {
-      newElement = processed.root;
-    } else {
-      newElement = document.createElement(processed.tag || "div");
-      applyElementOptions(newElement, processed.options);
-    }
-
-    // Add as child to current context
-    this.currentContext.appendChild(newElement);
-
-    // If callback provided, execute with new builder for the element
-    if (callback) {
-      const childBuilder = new Builder();
-      childBuilder.root = newElement;
-      childBuilder.currentContext = newElement;
-      try {
-        callback(childBuilder);
-      } catch (error) {
-        if (BuilderConfig.validationMode === "strict") {
-          throw error;
-        } else if (BuilderConfig.validationMode === "warn") {
-          console.warn("BuilderJS build callback error:", error);
-        }
-      }
-      return this;
-    }
-
-    // Set new element as current context (original behavior)
-    this.currentContext = newElement;
-    return this;
-  }
-
-  /**
    * Adds a child element to the current context with optional scoped building
    * @param {...*} args - Arguments for child creation, with optional callback as last parameter
-   * @returns {Builder} Child builder instance or this instance for chaining
+   * @returns {Builder} This instance for chaining
    */
-  addChild(...args) {
+  add(...args) {
     // Check if last argument is a callback for scoped building
     const hasCallback = args.length >= 2 && typeof args[args.length - 1] === "function";
     const callback = hasCallback ? args[args.length - 1] : null;
-
-    // Process args without the callback
     const argsForProcessing = hasCallback ? args.slice(0, -1) : args;
-    const processed = Builder.processArgs(...argsForProcessing);
+
+    // Simple element creation
     let node, childBuilder;
 
-    if (processed.root) {
-      if (typeof argsForProcessing[0] === "string" && /[>#.*{]/.test(argsForProcessing[0])) {
-        childBuilder = new Builder("div");
-        childBuilder.root = processed.root;
-        childBuilder.applyOptions(processed.options);
-        node = childBuilder.root;
-      } else {
-        node = processed.root;
-        if (callback) {
-          childBuilder = new Builder();
-          childBuilder.root = node;
-          childBuilder.currentContext = node;
-        }
-      }
-    } else if (processed.tag) {
-      childBuilder = new Builder(processed.tag, processed.options);
-      node = childBuilder.root;
-    } else if (argsForProcessing[0] instanceof Builder) {
+    if (argsForProcessing[0] instanceof Builder) {
+      // Adding another builder
       node = argsForProcessing[0].root;
       childBuilder = argsForProcessing[0];
     } else if (argsForProcessing[0] instanceof HTMLElement) {
+      // Adding an existing HTML element
       node = argsForProcessing[0];
       if (callback) {
         childBuilder = new Builder();
         childBuilder.root = node;
         childBuilder.currentContext = node;
       }
-    }
+    } else {
+      // Standard tag + options
+      const tag = argsForProcessing[0] || "div";
+      const options = argsForProcessing[1] || {};
 
+      // Validate tag name
+      if (!isValidTag(tag)) {
+        if (BuilderConfig.validationMode === "strict") {
+          throw new Error(`BuilderJS: Invalid tag name '${tag}'`);
+        } else if (BuilderConfig.validationMode === "warn") {
+          console.warn(`BuilderJS: Invalid tag name '${tag}', using 'div' instead`);
+        }
+        childBuilder = new Builder("div", options);
+      } else {
+        childBuilder = new Builder(tag, options);
+      }
+
+      node = childBuilder.root;
+    }
     if (node) {
       this.currentContext.appendChild(node);
     }
@@ -339,13 +197,48 @@ class Builder {
         if (BuilderConfig.validationMode === "strict") {
           throw error;
         } else if (BuilderConfig.validationMode === "warn") {
-          console.warn("BuilderJS addChild callback error:", error);
+          console.warn("BuilderJS add callback error:", error);
         }
       }
+    }
+
+    // Always return this instance for chaining
+    return this;
+  }
+
+  /**
+   * Adds multiple child elements to the current context
+   * @param {Array} children - Array of child element configurations
+   * @returns {Builder} This instance for chaining
+   */
+  addAll(children) {
+    if (!Array.isArray(children)) {
+      console.warn("BuilderJS: addAll() requires an array");
       return this;
     }
 
-    return childBuilder || this;
+    children.forEach((child) => {
+      if (typeof child === "string") {
+        // Simple tag name
+        this.add(child);
+      } else if (typeof child === "object" && child !== null) {
+        // Object with tag, options, callback
+        const { tag, options, callback } = child;
+        if (callback && typeof callback === "function") {
+          this.add(tag, options, callback);
+        } else {
+          this.add(tag, options);
+        }
+      } else if (child instanceof HTMLElement) {
+        // Direct HTML element
+        this.add(child);
+      } else if (child instanceof Builder) {
+        // Builder instance
+        this.add(child);
+      }
+    });
+
+    return this;
   }
 
   /**
@@ -442,6 +335,19 @@ class Builder {
   }
 
   // === EVENT HANDLING ===
+  // TODO: Implement comprehensive event handling system
+  // - Better event delegation
+  // - Event namespacing
+  // - Auto-cleanup on element removal
+  // - Chained event binding (.click(), .hover(), etc.)
+  // - Event data passing
+  // - Once/off event utilities
+
+  // TODO: Add Components and Templates system after event handling
+  // - Component base class with lifecycle methods
+  // - Template factory functions
+  // - State management integration
+  // - Component registry and auto-mounting
 
   on(events, handler, options = {}) {
     const eventArray = Array.isArray(events) ? events : [events];
@@ -499,16 +405,99 @@ class Builder {
 
   // === UTILITY METHODS ===
 
+  /**
+   * Renders the builder's root element to a target container
+   * @param {string|HTMLElement} target - CSS selector string or HTMLElement to render into
+   * @param {Object} options - Rendering options
+   * @param {boolean} options.clear - Whether to clear the target container before rendering (default: false)
+   * @param {string} options.position - Where to insert the element: 'start', 'end', 'before', 'after' (default: 'end')
+   * @returns {Builder} This instance for chaining
+   */
+  render(target, options = {}) {
+    if (!target) {
+      console.warn("BuilderJS: render() requires a target");
+      return this;
+    }
+
+    let targetElement;
+
+    // Handle target parameter
+    if (typeof target === "string") {
+      targetElement = document.querySelector(target);
+      if (!targetElement) {
+        console.warn(`BuilderJS: Target element not found: ${target}`);
+        return this;
+      }
+    } else if (target instanceof HTMLElement) {
+      targetElement = target;
+    } else {
+      console.warn("BuilderJS: Invalid target type. Expected string selector or HTMLElement");
+      return this;
+    }
+
+    // Default options
+    const { clear = false, position = "end" } = options;
+
+    // Clear target if requested
+    if (clear) {
+      targetElement.innerHTML = "";
+    }
+
+    // Insert based on position
+    switch (position) {
+      case "start":
+        targetElement.insertBefore(this.root, targetElement.firstChild);
+        break;
+      case "end":
+        targetElement.appendChild(this.root);
+        break;
+      case "before":
+        if (targetElement.parentNode) {
+          targetElement.parentNode.insertBefore(this.root, targetElement);
+        } else {
+          console.warn("BuilderJS: Cannot insert before element with no parent");
+        }
+        break;
+      case "after":
+        if (targetElement.parentNode) {
+          targetElement.parentNode.insertBefore(this.root, targetElement.nextSibling);
+        } else {
+          console.warn("BuilderJS: Cannot insert after element with no parent");
+        }
+        break;
+      default:
+        console.warn(`BuilderJS: Invalid position "${position}". Using default "end"`);
+        targetElement.appendChild(this.root);
+    }
+
+    return this;
+  }
+
   applyOptions(options) {
     applyElementOptions(this.currentContext, options);
     return this;
   }
 
+  /**
+   * Simple utility method to append this builder's root element to a parent
+   * @param {HTMLElement|Builder|string} parent - Parent element, Builder instance, or CSS selector
+   * @returns {Builder} This instance for chaining
+   * @note For advanced rendering options (positioning, clearing), use render() instead
+   */
   appendTo(parent) {
-    if (parent instanceof HTMLElement) {
+    if (typeof parent === "string") {
+      const element = document.querySelector(parent);
+      if (element) {
+        element.appendChild(this.root);
+      } else {
+        console.warn(`BuilderJS: appendTo target not found: ${parent}`);
+      }
+    } else if (parent instanceof HTMLElement) {
       parent.appendChild(this.root);
     } else if (parent instanceof Builder) {
       parent.currentContext.appendChild(this.root);
+    } else {
+      console.warn("BuilderJS: appendTo requires HTMLElement, Builder, or CSS selector");
     }
     return this;
   }
@@ -521,8 +510,12 @@ class Builder {
     }
   }
 
-  static setErrorCallback(callback) {
-    BuilderConfig.errorCallback = callback;
+  static getValidationMode() {
+    return BuilderConfig.validationMode;
+  }
+
+  static isValidTag(tag) {
+    return isValidTag(tag);
   }
 }
 
@@ -532,8 +525,6 @@ class Builder {
 if (typeof module !== "undefined" && module.exports) {
   // Node.js/CommonJS
   module.exports = Builder;
-  module.exports.parseEmmet = parseEmmet;
-  module.exports.camelToKebab = camelToKebab;
   module.exports.BuilderConfig = BuilderConfig;
 } else if (typeof window !== "undefined") {
   // Browser global
@@ -544,8 +535,6 @@ if (typeof module !== "undefined" && module.exports) {
 // ES6 modules for modern bundlers
 try {
   if (typeof exports !== "undefined") {
-    exports.parseEmmet = parseEmmet;
-    exports.camelToKebab = camelToKebab;
     exports.BuilderConfig = BuilderConfig;
     exports.default = Builder;
   }
