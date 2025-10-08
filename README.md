@@ -1,5 +1,7 @@
 # 🚀 BuilderJS 0.0.4 - Simplified & Secure DOM Manipulation
 
+> ⚠️ **IN DEVELOPMENT** - This project is actively being developed and may have breaking changes.
+
 [![Version](https://img.shields.io/badge/version-0.0.4-brightgreen.svg)](https://github.com/BrettWhitson/Builder-JS)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Modern](https://img.shields.io/badge/ES6+-Modern%20JavaScript-blue.svg)](https://github.com/BrettWhitson/Builder-JS)
